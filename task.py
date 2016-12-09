@@ -45,8 +45,11 @@ def getvip(uid):
 def getvips(startid):
     lid = startid*jump;  
     for i in range(lid,lid+jump):
-        if(not getvip(i)):
-            return False;
+        try:
+            if(not getvip(i)):
+                return False;
+        except:
+            pass;
     return True;
             
 def main():
