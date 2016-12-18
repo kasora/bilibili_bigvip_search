@@ -1,32 +1,51 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+""" you can use this script to check the result """
+
 import pymysql
+import config
 
-user = ""
-passwd = ""
-db =  ""
+USER = config.DATABASE['user']
+PASSWD = config.DATABASE['password']
+DBNAME = config.DATABASE['name']
 
-ans = {}
+def getresult():
 
-conn = pymysql.connect(host="127.0.0.1",user=user,passwd=passwd,db=db,use_unicode=True, charset="utf8")
-cur = conn.cursor()
+    """
+    It will print the percent of bigvip in each level.
+    It also return a dict of the user number of each level.
+    """
 
-for i in range(7):
-    countsql = 'select count(ulevel) from vipuserinfo where ulevel = %s';
-    cur.execute(countsql, i);
+    ans = {}
+    conn = pymysql.connect(
+        host="127.0.0.1",
+        user=USER,
+        passwd=PASSWD,
+        db=DBNAME,
+        use_unicode=True,
+        charset="utf8"
+    )
+    cur = conn.cursor()
 
-    res = cur.fetchall()
-    for row in res:
-        ans[str(i)] = int(row[0])
+    for i in range(7):
+        countsql = 'select count(ulevel) from vipuserinfo where ulevel = %s'
+        cur.execute(countsql, i)
 
-cur.close()
-conn.close()
+        res = cur.fetchall()
+        for row in res:
+            ans[str(i)] = int(row[0])
 
-allnum = sum([ans[i] for i in ans])
+    cur.close()
+    conn.close()
 
-print('There are '+str(allnum)+' user is big vip.')
-for i in range(7):
-    si = str(i)
-    print('level '+si+':'+str(ans[si])+'    '+str(ans[si]/allnum*100)+'%')
-    
-    
-        
+    allnum = sum([ans[i] for i in ans])
 
+    print('There are '+str(allnum)+' user is big vip.')
+    for i in range(7):
+        _si = str(i)
+        print('level '+_si+':'+str(ans[_si])+'    '+str(ans[_si]/allnum*100)+'%')
+    return ans
+
+if __name__ == '__main__':
+    getresult()

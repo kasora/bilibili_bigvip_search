@@ -2,81 +2,97 @@
 # -*- coding : utf-8 -*-
 # task.py for windows
 
-import time, sys, queue, random, requests, json, threading
+"""
+start this script in any terminal you want
+it will send requests to bilibili and send
+the result to master.py
+"""
+
+import time
+import json
 from multiprocessing.managers import BaseManager
+import requests
+import config
 
+SERVER_SITE = config.MASTER['server_site']
+SERVER_PORT = config.MASTER['server_port']
+AUTHKEY = config.MASTER['authkey']
 
-serverSite = ''
+BaseManager.register('get_task')
+BaseManager.register('get_result')
 
+INTERVAL = config.BILIBILI['interval']
 
-BaseManager.register('get_task');
-BaseManager.register('get_result');
-
-lock = threading.Lock()
-conn = BaseManager(address = (serverSite,5011), authkey = b'kasora');
-vipurl = "http://space.bilibili.com/ajax/member/getVipStatus";
-levelurl = "http://space.bilibili.com/ajax/member/GetInfo";
-head = {'Referer':'http://space.bilibili.com'};
-jump = 1000;
-
-ansl = [];
+ansl = []
 
 def getvip(uid):
+
+    """ get the data of user:uid """
+
+    vipurl = "http://space.bilibili.com/ajax/member/getVipStatus"
+    levelurl = "http://space.bilibili.com/ajax/member/GetInfo"
+    head = {'Referer':'http://space.bilibili.com'}
+
     params = {"mid":uid}
-    r = requests.get(vipurl,params = {"mid":uid},headers = head);
+    res = requests.get(vipurl, params={"mid":uid}, headers=head)
     try:
-        info = json.loads(r.text);
+        info = json.loads(res.text)
     except:
         print("I'm killed. retrying...")
-        return False;
+        return False
     try:
-        viptype = info["data"]["vipType"];
+        viptype = info["data"]["vipType"]
     except:
-        return True;
-    if(viptype==2):        
-        r = requests.post(levelurl,data = params,headers = head);
-        info = json.loads(r.text);
-        level = info["data"]["level_info"]["current_level"];
-        lock.acquire()
-        ansl.append({"uid":uid,"level":level})
-        lock.release()
+        return True
+    if viptype == 2:
+        res = requests.post(levelurl, data=params, headers=head)
+        info = json.loads(res.text)
+        level = info["data"]["level_info"]["current_level"]
+        ansl.append({"uid":uid, "level":level})
     return True
 
 def getvips(startid):
-    lid = startid*jump;  
-    for i in range(lid,lid+jump):
+
+    """ get the data of user id from startid to startid + interval """
+
+    lid = startid*INTERVAL
+    for i in range(lid, lid+INTERVAL):
         try:
-            if(not getvip(i)):
-                return False;
+            if not getvip(i):
+                return False
         except:
-            pass;
-    return True;
-            
+            pass
+    return True
+
 def main():
+
+    """ start a task """
+
+    conn = BaseManager(address=(SERVER_SITE, SERVER_PORT), authkey=AUTHKEY)
     try:
-        conn.connect();
+        conn.connect()
         print("Connection succeeded.")
     except:
-        print('Connection failed...retrying...');
-        time.sleep(5);
-        main();
-        return;
+        print('Connection failed...retrying...')
+        time.sleep(5)
+        main()
+        return
 
-    task = conn.get_task();
-    result = conn.get_result();
+    task = conn.get_task()
+    result = conn.get_result()
 
     while not task.empty():
-        n = task.get(timeout = 5);
-        print('deal with '+str(n*jump)+' to '+str((n+1)*jump))
+        startid = task.get(timeout=5)
+        print('deal with '+str(startid*INTERVAL)+' to '+str((startid+1)*INTERVAL))
         ansl.clear()
-        while(not getvips(n)):
-            pass;
-        rt = (n, ansl);
-        result.put(rt);
+        while not getvips(startid):
+            pass
+        res = (startid, ansl)
+        result.put(res)
         print('finish it.')
-        
+
     print("finished all.")
-    return;
+    return
 
 if __name__ == '__main__':
-    main();
+    main()
