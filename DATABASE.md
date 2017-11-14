@@ -9,7 +9,7 @@ VipUserInfo:
 
 |Name|Type|Primary Key|Comments|
 |----|----|-----------|--------|
-|uid|VARCHAR(200)|TRUE| |
+|uid|INT(200)|TRUE| |
 |ulevel|VARCHAR(200)|FALSE| |
 
 #### SQL
